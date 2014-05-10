@@ -160,7 +160,17 @@ static int process_config(VolumeManager *vm)
     int flags;
 
     property_get("ro.hardware", propbuf, "");
-    snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
+
+    FILE *fp_mmc = fopen("/sys/devices/platform/odroid-sysfs/boot_mode","r");
+    char boot_mode = 0;
+    fread(&boot_mode, 1, 1, fp_mmc);
+    SLOGE("boot_mode = %c", boot_mode);
+    fclose(fp_mmc);
+    if (boot_mode == '1') {
+        SLOGE("sd boot_mode");
+        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s.sdboot", propbuf);
+    } else 
+        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
 
     fstab = fs_mgr_read_fstab(fstab_filename);
     if (!fstab) {
@@ -182,8 +192,7 @@ static int process_config(VolumeManager *vm)
                 flags |= VOL_ENCRYPTABLE;
             }
             /* Only set this flag if there is not an emulated sd card */
-            if (fs_mgr_is_noemulatedsd(&fstab->recs[i]) &&
-                !strcmp(fstab->recs[i].fs_type, "vfat")) {
+            if (fs_mgr_is_noemulatedsd(&fstab->recs[i])) {
                 flags |= VOL_PROVIDES_ASEC;
             }
             dv = new DirectVolume(vm, &(fstab->recs[i]), flags);
