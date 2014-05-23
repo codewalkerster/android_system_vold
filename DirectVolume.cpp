@@ -174,9 +174,7 @@ void DirectVolume::handleDiskAdded(const char *devpath, NetlinkEvent *evt) {
 #ifdef PARTITION_DEBUG
         SLOGD("Dv::diskIns - No partitions - good to go son!");
 #endif
-        // Do not leave idle state if already in (avoids warnings)
-        if (getState() != Volume::State_Idle)
-            setState(Volume::State_Idle);
+        setState(Volume::State_Idle);
     } else {
 #ifdef PARTITION_DEBUG
         SLOGD("Dv::diskIns - waiting for %d partitions (mask 0x%x)",
