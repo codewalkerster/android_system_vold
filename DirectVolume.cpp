@@ -275,12 +275,62 @@ void DirectVolume::handleDiskRemoved(const char *devpath, NetlinkEvent *evt) {
     int major = atoi(evt->findParam("MAJOR"));
     int minor = atoi(evt->findParam("MINOR"));
     char msg[255];
-
+#if (defined(SAMSUNG_EXYNOS4x12) || defined(SAMSUNG_EXYNOS5250))
+    int state;
+#endif
     SLOGD("Volume %s %s disk %d:%d removed\n", getLabel(), getMountpoint(), major, minor);
+
+#if (defined(SAMSUNG_EXYNOS4x12) || defined(SAMSUNG_EXYNOS5250))
+    if (mDiskNumParts) {
+        /* if mDiskNumParts is not 0, they already unmount in handlePartitionRemoved */
+        snprintf(msg, sizeof(msg), "Volume %s %s disk removed (%d:%d)",
+            getLabel(), getMountpoint(), major, minor);
+        mVm->getBroadcaster()->sendBroadcast(ResponseCode::VolumeDiskRemoved,
+            msg, false);
+    } else {
+        /*
+         * Some storages don't(disk) have partition,
+         * So they sould be forced to unmount.
+         */
+        state = getState();
+
+        if (state != Volume::State_Mounted && state != Volume::State_Shared) {
+            SLOGE("Failed to Diskremoved - It's not status of Mount or Shared!");
+            return;
+        }
+        if ((dev_t) MKDEV(major, minor) == mCurrentlyMountedKdev) {
+            snprintf(msg, sizeof(msg), "Volume %s %s disk bad removal (%d:%d)",
+                getLabel(), getMountpoint(), major, minor);
+            mVm->getBroadcaster()->sendBroadcast(ResponseCode::VolumeBadRemoval,
+                                                                msg, false);
+            if (mVm->cleanupAsec(this, true))
+                SLOGE("Failed to cleanup ASEC - unmount will probably fail!");
+
+            if (Volume::unmountVol(true, false))
+                SLOGE("Failed to unmount volume on bad removal (%s)",
+                    strerror(errno));
+            else
+                SLOGD("Crisis averted");
+
+        } else if (state == Volume::State_Shared) {
+            /* removed during mass storage */
+            snprintf(msg, sizeof(msg), "Volume %s disk bad removal (%d:%d)",
+                getLabel(), major, minor);
+            mVm->getBroadcaster()->sendBroadcast(ResponseCode::VolumeBadRemoval,
+                                                                msg, false);
+            if (mVm->unshareVolume(getLabel(), "ums"))
+                SLOGE("Failed to unshare volume on bad removal (%s)",
+                    strerror(errno));
+            else
+                SLOGD("Crisis averted");
+        }
+    }
+#else
     snprintf(msg, sizeof(msg), "Volume %s %s disk removed (%d:%d)",
              getLabel(), getMountpoint(), major, minor);
     mVm->getBroadcaster()->sendBroadcast(ResponseCode::VolumeDiskRemoved,
                                              msg, false);
+#endif
     setState(Volume::State_NoMedia);
 }
 

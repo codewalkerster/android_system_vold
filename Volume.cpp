@@ -44,8 +44,14 @@
 #include "VolumeManager.h"
 #include "ResponseCode.h"
 #include "Fat.h"
+#include "Ntfs.h"
+#include "Ext4.h"
 #include "Process.h"
 #include "cryptfs.h"
+
+#define VFAT 0
+#define NTFS 1
+#define EXT4 2
 
 extern "C" void dos_partition_dec(void const *pp, struct dos_partition *d);
 extern "C" void dos_partition_enc(void *pp, struct dos_partition *d);
@@ -251,10 +257,17 @@ int Volume::formatVol() {
         SLOGI("Formatting volume %s (%s)", getLabel(), devicePath);
     }
 
-    if (Fat::format(devicePath, 0)) {
-        SLOGE("Failed to format (%s)", strerror(errno));
-        goto err;
-    }
+	if (filesystem == VFAT) {
+		if (Fat::format(devicePath, 0)) {
+			SLOGE("Failed to format (%s)", strerror(errno));
+			goto err;
+		}
+	} else if (filesystem == EXT4) {
+		if (Ext4::format(devicePath)) {
+			SLOGE("Failed to format (%s)", strerror(errno));
+			goto err;
+		}
+	}
 
     ret = 0;
 
@@ -387,6 +400,8 @@ int Volume::mountVol() {
         }
     }
 
+	filesystem = VFAT;
+
     for (i = 0; i < n; i++) {
         char devicePath[255];
 
@@ -401,7 +416,21 @@ int Volume::mountVol() {
         if (Fat::check(devicePath)) {
             if (errno == ENODATA) {
                 SLOGW("%s does not contain a FAT filesystem\n", devicePath);
-                continue;
+				if (Ntfs::doMount(devicePath, getMountpoint(), false, false, false,
+					1000, 1015, 0702, false)) {
+					SLOGE("%s failed to mount via NTFS (%s)\n", devicePath, strerror(errno));
+					if (Ext4::doMount(devicePath, getMountpoint(), false, false, false)) {
+						SLOGE("%s failed to mount via Ext4 (%s)\n", devicePath, strerror(errno));
+					} else {
+						filesystem = EXT4;
+						SLOGE("Ext4 mounted");
+						continue;
+					}
+				} else {
+					filesystem = NTFS;
+					SLOGE("NTFS mounted");
+                	continue;
+				}
             }
             errno = EIO;
             /* Badness - abort the mount */
@@ -428,6 +457,7 @@ int Volume::mountVol() {
         if (Fat::doMount(devicePath, "/mnt/secure/staging", false, false, false,
                 AID_SYSTEM, gid, 0702, true)) {
             SLOGE("%s failed to mount via VFAT (%s)\n", devicePath, strerror(errno));
+			filesystem = VFAT;
             continue;
         }
 

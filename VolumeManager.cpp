@@ -44,6 +44,7 @@
 #include "Loop.h"
 #include "Ext4.h"
 #include "Fat.h"
+#include "Ntfs.h"
 #include "Devmapper.h"
 #include "Process.h"
 #include "Asec.h"
@@ -69,6 +70,9 @@ VolumeManager::VolumeManager() {
     // set dirty ratio to 0 when UMS is active
     mUmsDirtyRatio = 0;
     mVolManagerDisabled = 0;
+#if defined(BOARD_USES_HDMI)
+    mHdmiClient = android::SecHdmiClient::getInstance();
+#endif
 }
 
 VolumeManager::~VolumeManager() {
@@ -152,6 +156,32 @@ void VolumeManager::handleBlockEvent(NetlinkEvent *evt) {
     }
 }
 
+#if defined(BOARD_USES_HDMI)
+void VolumeManager::handleHdmiEvent(NetlinkEvent *evt)
+{
+    int action;
+    action = evt->getAction();
+    if (action == NetlinkEvent::NlActionChange ) {
+        const char *state = evt->findParam("HDMI_STATE");
+		//codewalker
+		if (!state) {
+			SLOGW("No HDMI_STATE found in netlink event");
+			return;
+		}
+
+        // Send the HDMI cable status to libhdmistatus(to SurfaceFlinger)
+        if (!strcmp(state, "online")) {
+            SLOGD("HDMI: online\n");
+            mHdmiClient->setHdmiCableStatus(1);
+        } else {
+            SLOGD("HDMI: offline\n");
+            mHdmiClient->setHdmiCableStatus(0);
+        }
+    } else {
+        SLOGW("No handler implemented for action %d", action);
+    }
+}
+#endif
 int VolumeManager::listVolumes(SocketClient *cli) {
     VolumeCollection::iterator i;
 

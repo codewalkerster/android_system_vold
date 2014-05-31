@@ -54,4 +54,16 @@ void NetlinkHandler::onEvent(NetlinkEvent *evt) {
     if (!strcmp(subsys, "block")) {
         vm->handleBlockEvent(evt);
     }
+#if defined(BOARD_USES_HDMI)
+#if defined(SAMSUNG_EXYNOS5250) || defined(BOARD_USE_V4L2) || defined(BOARD_USE_V4L2_ION)
+    else if (!strcmp(subsys, "platform")) {
+        vm->handleHdmiEvent(evt);
+    }
+#elif defined(SAMSUNG_EXYNOS4x12) || (BOARD_USES_HDMI)
+    else if (!strcmp(subsys, "misc")) {
+		SLOGD("lt::%s::onEvent::vm->handleHdmiEvent(evt)",__func__);//lt,debug
+        vm->handleHdmiEvent(evt);//lt, catch the event
+    }
+#endif
+#endif
 }

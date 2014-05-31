@@ -163,8 +163,22 @@ static int process_config(VolumeManager *vm) {
     int n = 0;
     char line[255];
 
+	//codewalker
     if (!(fp = fopen("/etc/vold.fstab", "r"))) {
-        return -1;
+		FILE *fp_mmc = fopen("/sys/devices/platform/odroid-sysfs/boot_mode","r");
+        char boot_mode = 0;
+		fread(&boot_mode, 1, 1, fp_mmc);
+		SLOGE("boot_mode = %c", boot_mode);
+		fclose(fp_mmc);
+		if (boot_mode == '0') {
+    		if (!(fp = fopen("/etc/vold_emmc.fstab", "r"))) {
+				return -1;
+			}
+		} else if (boot_mode == '1') {
+			if (!(fp = fopen("/etc/vold_sd.fstab", "r"))) {
+				return -1;
+			}
+		}
     }
 
     while(fgets(line, sizeof(line), fp)) {

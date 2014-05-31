@@ -12,6 +12,7 @@ common_src_files := \
 	Process.cpp \
 	Ext4.cpp \
 	Fat.cpp \
+	Ntfs.cpp \
 	Loop.cpp \
 	Devmapper.cpp \
 	ResponseCode.cpp \
@@ -59,8 +60,30 @@ LOCAL_C_INCLUDES := $(common_c_includes)
 LOCAL_CFLAGS := -Werror=format
 
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
-
 LOCAL_STATIC_LIBRARIES := libfs_mgr
+
+ifeq ($(BOARD_USES_HDMI),true)
+LOCAL_CFLAGS += -DBOARD_USES_HDMI
+LOCAL_SHARED_LIBRARIES += libhdmiclient
+LOCAL_C_INCLUDES += \
+	device/samsung/$(TARGET_BOARD_PLATFORM)/libhdmi/libhdmiservice
+
+ifeq ($(TARGET_SOC),exynos4x12)
+	LOCAL_CFLAGS += -DSAMSUNG_EXYNOS4x12
+endif
+
+ifeq ($(TARGET_SOC),exynos5250)
+	LOCAL_CFLAGS += -DSAMSUNG_EXYNOS5250
+endif
+
+ifeq ($(BOARD_USE_V4L2_ION),true)
+	LOCAL_CFLAGS += -DBOARD_USE_V4L2_ION
+endif
+
+ifeq ($(BOARD_USE_V4L2),true)
+	LOCAL_CFLAGS += -DBOARD_USE_V4L2
+endif
+endif
 
 include $(BUILD_EXECUTABLE)
 
