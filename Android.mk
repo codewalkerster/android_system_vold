@@ -76,7 +76,12 @@ LOCAL_C_INCLUDES := $(common_c_includes)
 LOCAL_CFLAGS := -Werror=format
 
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
-
+LOCAL_SRC_FILES := \
+       MiscManager.cpp \
+	   Misc.cpp \
+	   G3Dev.cpp \
+	   $(LOCAL_SRC_FILES)
+LOCAL_CFLAGS += -DUSE_USB_MODE_SWITCH
 LOCAL_STATIC_LIBRARIES := $(common_static_libraries)
 ifeq ($(BOARD_USES_HDMI),true)
 LOCAL_CFLAGS += -DBOARD_USES_HDMI
