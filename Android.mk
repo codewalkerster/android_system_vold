@@ -12,6 +12,7 @@ common_src_files := \
 	Process.cpp \
 	Ext4.cpp \
 	Fat.cpp \
+	Ntfs.cpp \
 	Loop.cpp \
 	Devmapper.cpp \
 	ResponseCode.cpp \
@@ -59,6 +60,20 @@ LOCAL_C_INCLUDES := $(common_c_includes)
 LOCAL_CFLAGS := -Werror=format
 
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
+
+ifeq ($(strip $(BOARD_RADIO_DATAONLY)), true)
+LOCAL_SRC_FILES := \
+	MiscManager.cpp \
+	Misc.cpp \
+	G3Dev.cpp \
+	$(LOCAL_SRC_FILES)
+endif	
+
+LOCAL_CFLAGS += -DUSE_USB_MODE_SWITCH
+
+ifeq ($(BOARD_MOUNT_SDCARD_RW),true)
+	LOCAL_CFLAGS += -DMOUNT_SDCARD_RW
+endif
 
 LOCAL_STATIC_LIBRARIES := libfs_mgr
 

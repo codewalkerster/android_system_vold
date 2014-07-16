@@ -55,6 +55,7 @@ protected:
     int mPartIdx;
     int mOrigPartIdx;
     bool mRetryMount;
+	int filesystem;
 
     /*
      * The major/minor tuple of the currently mounted filesystem.

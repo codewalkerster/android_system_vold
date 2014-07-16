@@ -33,6 +33,9 @@
 #include "NetlinkManager.h"
 #include "DirectVolume.h"
 #include "cryptfs.h"
+#include "G3Dev.h"
+#include <sysutils/NetlinkEvent.h>
+#include  "MiscManager.h"
 
 static int process_config(VolumeManager *vm);
 static void coldboot(const char *path);
@@ -77,6 +80,22 @@ int main() {
         exit(1);
     }
 
+#ifdef USE_USB_MODE_SWITCH
+	SLOGE("Start Misc devices Manager...");
+	MiscManager *mm;
+    if (!(mm = MiscManager::Instance())) {
+        SLOGE("Unable to create MiscManager");
+        exit(1);
+    };
+    mm->setBroadcaster((SocketListener *) cl);
+    if (mm->start()) {
+        SLOGE("Unable to start MiscManager (%s)", strerror(errno));
+        exit(1);
+    }
+	G3Dev* g3 = new G3Dev(mm);
+    g3->handleUsb();
+	mm->addMisc(g3);
+#endif
     coldboot("/sys/block");
 //    coldboot("/sys/class/switch");
 
@@ -163,9 +182,25 @@ static int process_config(VolumeManager *vm) {
     int n = 0;
     char line[255];
 
+	//codewalker
     if (!(fp = fopen("/etc/vold.fstab", "r"))) {
-        return -1;
-    }
+		FILE *fp_mmc = fopen("/sys/devices/platform/odroid-sysfs/boot_mode","r");
+		char boot_mode = 0;
+		fread(&boot_mode, 1, 1, fp_mmc);
+		SLOGE("boot_mode = %c", boot_mode);
+		fclose(fp_mmc);
+		if (boot_mode == '0') {
+    		if (!(fp = fopen("/etc/vold.fstab.emmcboot", "r"))) {
+				return -1;
+			}
+		} else if (boot_mode == '1') {
+			if (!(fp = fopen("/etc/vold.fstab.sdboot", "r"))) {
+				return -1;
+			}
+		} else
+			return -1;
+	}
+
 
     while(fgets(line, sizeof(line), fp)) {
         const char *delim = " \t";

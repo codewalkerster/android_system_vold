@@ -26,6 +26,7 @@
 #include <sysutils/NetlinkEvent.h>
 #include "NetlinkHandler.h"
 #include "VolumeManager.h"
+#include "MiscManager.h"
 
 NetlinkHandler::NetlinkHandler(int listenerSocket) :
                 NetlinkListener(listenerSocket) {
@@ -53,5 +54,12 @@ void NetlinkHandler::onEvent(NetlinkEvent *evt) {
 
     if (!strcmp(subsys, "block")) {
         vm->handleBlockEvent(evt);
+#ifdef USE_USB_MODE_SWITCH
+    } else if (!strcmp(subsys, "usb")
+    	|| !strcmp(subsys, "scsi_device")) {
+    	 SLOGW("subsystem found in netlink event");
+	    MiscManager *mm = MiscManager::Instance();
+    	mm->handleEvent(evt);
+#endif
     }
 }
