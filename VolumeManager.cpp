@@ -460,7 +460,7 @@ int VolumeManager::createAsec(const char *id, unsigned int numSectors, const cha
 
         int mountStatus;
         if (usingExt4) {
-            mountStatus = Ext4::doMount(dmDevice, mountPoint, false, false, false);
+            mountStatus = Ext4::doMount(dmDevice, mountPoint, false, false, false, false);
         } else {
             mountStatus = Fat::doMount(dmDevice, mountPoint, false, false, false, ownerUid, 0, 0000,
                     false);
@@ -536,7 +536,7 @@ int VolumeManager::finalizeAsec(const char *id) {
 
     int result = 0;
     if (sb.c_opts & ASEC_SB_C_OPTS_EXT4) {
-        result = Ext4::doMount(loopDevice, mountPoint, true, true, true);
+        result = Ext4::doMount(loopDevice, mountPoint, true, true, true, false);
     } else {
         result = Fat::doMount(loopDevice, mountPoint, true, true, true, 0, 0, 0227, false);
     }
@@ -605,7 +605,8 @@ int VolumeManager::fixupAsecPermissions(const char *id, gid_t gid, const char* f
     int ret = Ext4::doMount(loopDevice, mountPoint,
             false /* read-only */,
             true  /* remount */,
-            false /* executable */);
+            false /* executable */,
+            false /* sdcard */);
     if (ret) {
         SLOGE("Unable remount to fix permissions for %s (%s)", id, strerror(errno));
         return -1;
@@ -661,7 +662,8 @@ int VolumeManager::fixupAsecPermissions(const char *id, gid_t gid, const char* f
     result |= Ext4::doMount(loopDevice, mountPoint,
             true /* read-only */,
             true /* remount */,
-            true /* execute */);
+            true /* execute */,
+            false /* sdcard */);
 
     if (result) {
         SLOGE("ASEC fix permissions failed (%s)", strerror(errno));
@@ -969,8 +971,6 @@ bool VolumeManager::isAsecInDirectory(const char *dir, const char *asecName) con
 
 int VolumeManager::findAsec(const char *id, char *asecPath, size_t asecPathLen,
         const char **directory) const {
-    int dirfd, fd;
-    const int idLen = strlen(id);
     char *asecName;
 
     if (!isLegalAsecId(id)) {
@@ -1028,7 +1028,7 @@ int VolumeManager::mountAsec(const char *id, const char *key, int ownerUid) {
 
     int written = snprintf(mountPoint, sizeof(mountPoint), "%s/%s", Volume::ASECDIR, id);
     if ((written < 0) || (size_t(written) >= sizeof(mountPoint))) {
-        SLOGE("ASEC mount failed: couldn't construct mountpoint", id);
+        SLOGE("ASEC mount failed: couldn't construct mountpoint %s", id);
         return -1;
     }
 
@@ -1061,7 +1061,6 @@ int VolumeManager::mountAsec(const char *id, const char *key, int ownerUid) {
 
     char dmDevice[255];
     bool cleanupDm = false;
-    int fd;
     unsigned int nr_sec = 0;
     struct asec_superblock sb;
 
@@ -1127,7 +1126,7 @@ int VolumeManager::mountAsec(const char *id, const char *key, int ownerUid) {
 
     int result;
     if (sb.c_opts & ASEC_SB_C_OPTS_EXT4) {
-        result = Ext4::doMount(dmDevice, mountPoint, true, false, true);
+        result = Ext4::doMount(dmDevice, mountPoint, true, false, true, false);
     } else {
         result = Fat::doMount(dmDevice, mountPoint, true, false, true, ownerUid, 0, 0222, false);
     }
@@ -1647,6 +1646,11 @@ bool VolumeManager::isMountpointMounted(const char *mp)
 }
 
 int VolumeManager::cleanupAsec(Volume *v, bool force) {
+    // Only primary storage needs ASEC cleanup
+    if (!(v->getFlags() & VOL_PROVIDES_ASEC)) {
+        return 0;
+    }
+
     int rc = 0;
 
     char asecFileName[255];
