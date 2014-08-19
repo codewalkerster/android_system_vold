@@ -1760,7 +1760,11 @@ int cryptfs_enable(char *howarg, char *passwd)
         crypt_ftr.fs_size = nr_sec;
     }
     crypt_ftr.flags |= CRYPT_ENCRYPTION_IN_PROGRESS;
+#ifdef USE_FMP_DM_CRYPT
+    strcpy((char *)crypt_ftr.crypto_type_name, "aes-xts-fmp");
+#else
     strcpy((char *)crypt_ftr.crypto_type_name, "aes-cbc-essiv:sha256");
+#endif
 
     /* Make an encrypted master key */
     if (create_encrypted_random_key(passwd, crypt_ftr.master_key, crypt_ftr.salt, &crypt_ftr)) {
