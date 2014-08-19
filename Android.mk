@@ -51,6 +51,10 @@ LOCAL_SRC_FILES := $(common_src_files)
 
 LOCAL_C_INCLUDES := $(common_c_includes)
 
+ifeq ($(BOARD_USES_FMP_DM_CRYPT), true)
+LOCAL_CFLAGS := -DUSE_FMP_DM_CRYPT
+endif
+
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
 
 LOCAL_STATIC_LIBRARIES := $(common_static_libraries)
@@ -70,6 +74,10 @@ LOCAL_SRC_FILES := \
 LOCAL_C_INCLUDES := $(common_c_includes)
 
 LOCAL_CFLAGS := -Werror=format
+
+ifeq ($(BOARD_USES_FMP_DM_CRYPT), true)
+LOCAL_CFLAGS += -DUSE_FMP_DM_CRYPT
+endif
 
 LOCAL_SHARED_LIBRARIES := $(common_shared_libraries)
 
