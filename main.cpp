@@ -160,21 +160,7 @@ static int process_config(VolumeManager *vm)
     int flags;
 
     property_get("ro.hardware", propbuf, "");
-
-    FILE *fp_mmc = fopen("/sys/bus/platform/drivers/odroid-sysfs/odroid_sysfs.16/boot_mode","r");
-    char boot_mode = 0;
-    if (fp_mmc) {
-        fread(&boot_mode, 1, 1, fp_mmc);
-        fclose(fp_mmc);
-    }
-    SLOGE("boot_mode = %c", boot_mode);
-    if (boot_mode == '1') {
-        SLOGE("sd boot_mode");
-        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s.sdboot", propbuf);
-    } else {
-        SLOGE("eMMC boot_mode");
-        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
-    }
+    snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
 
     fstab = fs_mgr_read_fstab(fstab_filename);
     if (!fstab) {
@@ -200,6 +186,16 @@ static int process_config(VolumeManager *vm)
                 flags |= VOL_PROVIDES_ASEC;
             }
             dv = new DirectVolume(vm, &(fstab->recs[i]), flags);
+
+            char path[PATH_MAX] = "/sys";
+            strcat(path, fstab->recs[i].blk_device);
+
+            /* Add the path if the device node is existed */
+            DIR *dir = opendir(path);
+            if (0 == dir) {
+                continue;
+            }
+            closedir(dir);
 
             if (dv->addPath(fstab->recs[i].blk_device)) {
                 SLOGE("Failed to add devpath %s to volume %s",
