@@ -188,6 +188,16 @@ static int process_config(VolumeManager *vm)
             }
             dv = new DirectVolume(vm, &(fstab->recs[i]), flags);
 
+            char path[PATH_MAX] = "/sys";
+            strcat(path, fstab->recs[i].blk_device);
+
+            /* Add the path if the device node is existed */
+            DIR *dir = opendir(path);
+            if (0 == dir) {
+                continue;
+            }
+            closedir(dir);
+
             if (dv->addPath(fstab->recs[i].blk_device)) {
                 SLOGE("Failed to add devpath %s to volume %s",
                       fstab->recs[i].blk_device, fstab->recs[i].label);
