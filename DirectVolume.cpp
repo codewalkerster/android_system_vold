@@ -42,6 +42,8 @@ DirectVolume::DirectVolume(VolumeManager *vm, const fstab_rec* rec, int flags) :
     mDiskMajor = -1;
     mDiskMinor = -1;
     mDiskNumParts = 0;
+    mIsDecrypted = 0;
+    mDevPath = NULL;
 
     if (strcmp(rec->mount_point, "auto") != 0) {
         ALOGE("Vold managed volumes must have auto mount point; ignoring %s",
@@ -94,6 +96,14 @@ void DirectVolume::handleVolumeUnshared() {
 int DirectVolume::handleBlockEvent(NetlinkEvent *evt) {
     const char *dp = evt->findParam("DEVPATH");
 
+    /*In order to support multi udisk at same time, we allow same fiter condition for
+      different Volume.
+      Save devpath when a disk is added, and return -1 here if devpath is different so it
+      move on to next volume.
+     */
+    if (mDevPath != NULL && strstr(dp,mDevPath) == NULL) {
+        return -1;
+    }
     PathCollection::iterator  it;
     for (it = mPaths->begin(); it != mPaths->end(); ++it) {
         if (!strncmp(dp, *it, strlen(*it))) {
@@ -181,6 +191,14 @@ void DirectVolume::handleDiskAdded(const char *devpath, NetlinkEvent *evt) {
              mDiskNumParts, mPendingPartMap);
 #endif
         setState(Volume::State_Pending);
+    }
+    if (strstr(mLabel, "udisk") != NULL) {
+        if (mDevPath != NULL) {
+            SLOGE("Unexpected statue of mDevPath, this should be a bug!");
+            free(mDevPath);
+        }
+        const char *dp = evt->findParam("DEVPATH");
+        mDevPath = strdup(dp);
     }
 }
 
@@ -295,6 +313,10 @@ void DirectVolume::handleDiskRemoved(const char *devpath, NetlinkEvent *evt) {
     mVm->getBroadcaster()->sendBroadcast(ResponseCode::VolumeDiskRemoved,
                                              msg, false);
     setState(Volume::State_NoMedia);
+    if (mDevPath != NULL) {
+        free(mDevPath);
+        mDevPath = NULL;
+    }
 }
 
 void DirectVolume::handlePartitionRemoved(const char *devpath, NetlinkEvent *evt) {

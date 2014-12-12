@@ -42,6 +42,7 @@ protected:
     int            mDiskNumParts;
     unsigned int   mPendingPartMap;
     int            mIsDecrypted;
+    char*          mDevPath;
 
 public:
     DirectVolume(VolumeManager *vm, const fstab_rec* rec, int flags);
