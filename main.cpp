@@ -163,9 +163,11 @@ static int process_config(VolumeManager *vm)
 
     FILE *fp_mmc = fopen("/sys/bus/platform/drivers/odroid-sysfs/odroid_sysfs.16/boot_mode","r");
     char boot_mode = 0;
-    fread(&boot_mode, 1, 1, fp_mmc);
-    SLOGE("boot_mode = %c", boot_mode);
-    fclose(fp_mmc);
+    if (fp_mmc) {
+        fread(&boot_mode, 1, 1, fp_mmc);
+        SLOGE("boot_mode = %c", boot_mode);
+        fclose(fp_mmc);
+    }
     if (boot_mode == '1') {
         SLOGE("sd boot_mode");
         snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s.sdboot", propbuf);
