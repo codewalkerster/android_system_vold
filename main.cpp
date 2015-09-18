@@ -161,7 +161,7 @@ static int process_config(VolumeManager *vm)
 
     property_get("ro.hardware", propbuf, "");
 
-    FILE *fp_mmc = fopen("/sys/bus/platform/drivers/odroid-sysfs/odroid_sysfs.16/boot_mode","r");
+    FILE *fp_mmc = fopen("/sys/bus/platform/drivers/odroid-sysfs/odroid_sysfs.15/boot_mode","r");
     char boot_mode = 0;
     if (fp_mmc) {
         fread(&boot_mode, 1, 1, fp_mmc);
