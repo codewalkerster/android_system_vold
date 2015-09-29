@@ -322,7 +322,8 @@ void DirectVolume::handleDiskChanged(const char * /*devpath*/,
                                      NetlinkEvent *evt) {
     int major = atoi(evt->findParam("MAJOR"));
     int minor = atoi(evt->findParam("MINOR"));
-
+    SLOGI("Volume %s disk changed.We don't deal with this case", getLabel());
+    return;
     if ((major != mDiskMajor) || (minor != mDiskMinor)) {
         return;
     }
