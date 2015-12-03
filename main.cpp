@@ -242,6 +242,19 @@ static void coldboot(const char *path) {
 
 static int process_config(VolumeManager *vm) {
     std::string path(android::vold::DefaultFstabPath());
+    FILE *fp_bootdev = fopen("/sys/class/odroid/bootdev","r");
+    char boot_dev[8] = {'\0',};
+    if (fp_bootdev) {
+        fread(boot_dev, 1, 8, fp_bootdev);
+        fclose(fp_bootdev);
+    }
+    SLOGE("bootdev = %s", boot_dev);
+    if (strncmp(boot_dev, "sd", 2) == 0) {
+        path += ".sdboot";
+    }
+
+    SLOGE("fstab_path = %s", path.c_str());
+
     fstab = fs_mgr_read_fstab(path.c_str());
     if (!fstab) {
         PLOG(ERROR) << "Failed to open default fstab " << path;
