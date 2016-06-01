@@ -49,6 +49,7 @@
 #include "Fat.h"
 #include "Ntfs.h"
 #include "Exfat.h"
+#include "Ext4.h"
 #include "Hfsplus.h"
 #include "Iso9660.h"
 #include "Process.h"
@@ -513,6 +514,7 @@ int Volume::smartMount(const char *devicePath, int part){
     bool mayContainVfat = true;
     bool mayContainExfat = true;
     bool mayContainNtfs = true;
+    bool mayContainExt4 = true;
     bool isLoop =((getLabel()!= NULL) && (0 == strcmp(getLabel(), "loop")))?true:false;
     bool useSubDir = false;
 
@@ -529,6 +531,7 @@ int Volume::smartMount(const char *devicePath, int part){
             mayContainVfat = true;
             mayContainExfat = true;
             mayContainNtfs = true;
+            mayContainExt4 = true;
             if (Fat::check(devicePath)) {
                 if (errno == ENODATA) {
                     mayContainVfat = false;
@@ -541,6 +544,16 @@ int Volume::smartMount(const char *devicePath, int part){
                                 if (errno == ENODATA) {
                                     mayContainNtfs = false;
                                     SLOGW("%s does not contain an NTFS filesystem\n", devicePath);
+                                    if (Ext4::check(devicePath)) {
+                                        if (errno == ENODATA) {
+                                            mayContainExt4 = false;
+                                            SLOGW("%s does not contain a EXT4 filesystem\n", devicePath);
+                                        } else {
+                                            errno = EIO;
+                                            /* For ntfs, if check fail, just try mount */
+                                            SLOGE("%s failed EXT4 checks (%s)", devicePath, strerror(errno));
+                                        }
+                                    }
                                 } else {
                                     errno = EIO;
                                     /* For ntfs, if check fail, just try mount */
@@ -627,6 +640,20 @@ int Volume::smartMount(const char *devicePath, int part){
             return 0;
         }
     }
+
+    //Ext4
+    if (mayContainExt4) {
+        if (Ext4::doMount(devicePath, getMountpoint(), false, false, false)) {
+            SLOGW("%s failed to mount via EXT4 (%s).",devicePath, strerror(errno));
+            if (!isLoop)
+                goto mount_fail;
+        }else{
+            setFileSystem("ext4");
+            SLOGI("Successfully mount %s as EXT4", devicePath);
+            return 0;
+        }
+    }
+
 
     //Hfs
     if (Hfsplus::doMount(devicePath, mountPoint, false, false, AID_MEDIA_RW,
