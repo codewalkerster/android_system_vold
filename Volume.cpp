@@ -553,6 +553,8 @@ int Volume::smartMount(const char *devicePath, int part){
                                             /* For ntfs, if check fail, just try mount */
                                             SLOGE("%s failed EXT4 checks (%s)", devicePath, strerror(errno));
                                         }
+                                    } else {
+                                        break;
                                     }
                                 } else {
                                     errno = EIO;
