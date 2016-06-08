@@ -83,13 +83,13 @@ int Exfat::check(const char *fsPath) {
             SLOGI("exFAT check completed OK");
             return 0;
 
-        case 2:
+        case 1:
             SLOGE("exFAT check failed (not a EXFAT filesystem)");
             errno = ENODATA;
             return -1;
 
         default:
-            SLOGE("exFAT check failed (unknown exit code %d)", rc);
+            SLOGE("exFAT check failed (unknown exit code %d)", status);
             errno = EIO;
             return -1;
         }
@@ -180,10 +180,10 @@ int Exfat::format(const char *fsPath, unsigned int numSectors) {
         rc = android_fork_execvp(4, (char **)args, &status,
                 false, true);
     } else {
-        args[7] = fsPath;
-        args[8] = NULL;
+        args[1] = fsPath;
+        args[2] = NULL;
 
-        rc = android_fork_execvp(8, (char **)args, &status,
+        rc = android_fork_execvp(2, (char **)args, &status,
                 false, true);
     }
 

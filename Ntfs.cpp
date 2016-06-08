@@ -170,7 +170,7 @@ int Ntfs::doMount(const char *fsPath, const char *mountPoint,
 #endif /* HAS_NTFS_3G */
 }
 
-int Ntfs::format(const char *fsPath UNUSED, unsigned int numSectors UNUSED) {
+int Ntfs::format(const char *fsPath, unsigned int numSectors) {
 #ifndef HAS_NTFS_3G
     SLOGE("Skipping NTFS format\n");
     errno = EIO;
