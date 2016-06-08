@@ -36,6 +36,8 @@
 
 #include <private/android_filesystem_config.h>
 
+#include <blkid/blkid.h>
+
 #define LOG_TAG "Vold"
 
 #include <cutils/fs.h>
@@ -61,6 +63,14 @@ extern "C" void dos_partition_enc(void *pp, struct dos_partition *d);
 
 #ifdef HAS_VIRTUAL_CDROM
 #define LOOP_DEV "/dev/block/loop0"
+#endif
+
+#ifndef MEDIA_UID
+#define MEDIA_UID   1023
+#endif
+
+#ifndef MEDIA_GID
+#define MEDIA_GID   1023
 #endif
 
 /*
@@ -154,6 +164,22 @@ dev_t Volume::getDiskDevice() {
 
 dev_t Volume::getShareDevice() {
     return getDiskDevice();
+}
+
+char *getFsType(const char * devicePath) {
+    char *fstype = NULL;
+
+    SLOGD("Trying to get filesystem type for %s \n", devicePath);
+
+    fstype = blkid_get_tag_value(NULL, "TYPE", devicePath);
+    if (fstype) {
+        SLOGD("Found %s filesystem on %s\n", fstype, devicePath);
+    } else {
+        SLOGE("None or unknown filesystem on %s\n", devicePath);
+        return NULL;
+    }
+
+    return fstype;
 }
 
 void Volume::handleVolumeShared() {
@@ -298,16 +324,62 @@ int Volume::formatVol(bool wipe) {
     sprintf(devicePath, "/dev/block/vold/%d:%d",
             major(partNode), minor(partNode));
 
-    if (mDebug) {
-        SLOGI("Formatting volume %s (%s)", getLabel(), devicePath);
-    }
+    {
+        const char* fstype = getFileSystem();
+        bool isExt4 = false;
 
-    if (Fat::format(devicePath, 0, wipe)) {
-        SLOGE("Failed to format (%s)", strerror(errno));
-        goto err;
-    }
+        /* If the device has no filesystem, let's default to vfat.
+         * A NULL fstype will cause a MAPERR in the format
+         * switch below */
+        if (mDebug) {
+            SLOGI("Formatting volume %s (%s) as %s", getLabel(), devicePath, fstype);
+        }
 
-    ret = 0;
+        if (strcmp(fstype, "vfat") == 0) {
+            ret = Fat::format(devicePath, 0, wipe);
+        } else if (strcmp(fstype, "ntfs") == 0) {
+            ret = Ntfs::format(devicePath, 0);
+        } else if (strcmp(fstype, "ext4") == 0) {
+            ret = Ext4::format(devicePath, 0, 0);
+            isExt4 = true;
+        } else if (strcmp(fstype, "exfat") == 0) {
+            ret = Exfat::format(devicePath, 0);
+        } else {
+            ret = Fat::format(devicePath, 0, wipe);
+        }
+
+        if (isExt4) {
+            const char* label = getLabel();
+            char* mediaPath = (char*) malloc(strlen(MEDIA_DIR) + strlen("/") + strlen(label) + 1);
+            sprintf(mediaPath, "%s/%s", MEDIA_DIR, label);
+            bool failed = false;
+            SLOGI("mediaPath is : %s", mediaPath);
+
+            if (!failed && Ext4::doMount(devicePath, mediaPath, false, false, true)) {
+                SLOGE("Failed mount ext4 to %s", mediaPath);
+                failed = true;
+            }
+
+            if (!failed && access(mediaPath, R_OK|W_OK)) {
+                if (mkdir(mediaPath, 0775)) {
+                    SLOGE("Failed to create %s (%s)", mediaPath, strerror(errno));
+                    failed = true;
+                }
+            }
+
+            if(!failed && chown(mediaPath, MEDIA_UID, MEDIA_GID)) {
+                SLOGE("Failed to set owner/group on %s (%s)", mediaPath, strerror(errno));
+                failed = true;
+            }
+
+            umount(mediaPath);
+            free(mediaPath);
+        }
+
+        if (ret <0) {
+            SLOGE("Failed to format (%s)", strerror(errno));
+        }
+    }
 
 err:
     setState(Volume::State_Idle);
