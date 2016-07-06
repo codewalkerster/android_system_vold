@@ -166,22 +166,26 @@ int Ext4::format(const char *fsPath, unsigned int numSectors, const char *mountp
 
     args[0] = MKEXT4FS_PATH;
     args[1] = "-J";
-    args[2] = "-a";
-    args[3] = mountpoint;
-    if (numSectors) {
-        char tmp[32];
-        snprintf(tmp, sizeof(tmp), "%u", numSectors * 512);
-        const char *size = tmp;
-        args[4] = "-l";
-        args[5] = size;
-        args[6] = fsPath;
-        rc = android_fork_execvp(ARRAY_SIZE(args), (char **)args, &status, false, true);
+    if (mountpoint == NULL) {
+        args[2] = fsPath;
+        rc = android_fork_execvp(3, (char **)args, &status, false, true);
     } else {
-        args[4] = fsPath;
-        rc = android_fork_execvp(5, (char **)args, &status, false, true);
+        args[2] = "-a";
+        args[3] = mountpoint;
+        if (numSectors) {
+            char tmp[32];
+            snprintf(tmp, sizeof(tmp), "%u", numSectors * 512);
+            const char *size = tmp;
+            args[4] = "-l";
+            args[5] = size;
+            args[6] = fsPath;
+            rc = android_fork_execvp(ARRAY_SIZE(args), (char **)args, &status, false, true);
+        } else {
+            args[4] = fsPath;
+            rc = android_fork_execvp(5, (char **)args, &status, false, true);
+        }
     }
-    rc = android_fork_execvp(ARRAY_SIZE(args), (char **)args, &status, false,
-            true);
+
     if (rc != 0) {
         SLOGE("Filesystem (ext4) format failed due to logwrap error");
         errno = EIO;

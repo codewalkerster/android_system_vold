@@ -33,7 +33,8 @@ common_c_includes := \
 	frameworks/native/include \
 	system/security/keystore \
 	hardware/libhardware/include/hardware \
-	system/security/softkeymaster/include/keymaster
+	system/security/softkeymaster/include/keymaster \
+	external/e2fsprogs/lib
 
 common_shared_libraries := \
 	libsysutils \
@@ -50,13 +51,16 @@ common_shared_libraries := \
 	libselinux \
 	libutils \
 	libhardware \
-	libsoftkeymaster
+	libsoftkeymaster \
+	libext2_blkid
 
 common_static_libraries := \
 	libfs_mgr \
 	libscrypt_static \
 	libmincrypt \
-	libbatteryservice
+	libbatteryservice \
+	libext2_blkid \
+	libext2_uuid_static
 
 include $(CLEAR_VARS)
 
