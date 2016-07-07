@@ -162,6 +162,21 @@ static int process_config(VolumeManager *vm)
     property_get("ro.hardware", propbuf, "");
     snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
 
+    FILE *fp_bootdev = fopen("/sys/class/odroid/bootdev","r");
+    char boot_dev[8] = {'\0',};
+    if (fp_bootdev) {
+        fread(boot_dev, 1, 8, fp_bootdev);
+        fclose(fp_bootdev);
+    }
+    SLOGE("bootdev = %s", boot_dev);
+    if (strncmp(boot_dev, "sd", 2) == 0) {
+        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s.sdboot", propbuf);
+    } else {
+        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
+    }
+
+    SLOGE("fstab_filename = %s", fstab_filename);
+
     fstab = fs_mgr_read_fstab(fstab_filename);
     if (!fstab) {
         SLOGE("failed to open %s\n", fstab_filename);
