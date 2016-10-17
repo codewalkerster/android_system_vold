@@ -182,7 +182,8 @@ static int process_config(VolumeManager *vm)
                 flags |= VOL_ENCRYPTABLE;
             }
             /* Only set this flag if there is not an emulated sd card */
-            if (fs_mgr_is_noemulatedsd(&fstab->recs[i])) {
+            if (fs_mgr_is_noemulatedsd(&fstab->recs[i]) &&
+                !strcmp(fstab->recs[i].fs_type, "vfat")) {
                 flags |= VOL_PROVIDES_ASEC;
             }
             dv = new DirectVolume(vm, &(fstab->recs[i]), flags);
