@@ -137,6 +137,10 @@ status_t PublicVolume::doMount() {
         stableName = mFsUuid;
     }
 
+    // Set the internal fat's mount point by "internal"
+    if (mFsType == "vfat" && mFsLabel == "VFAT")
+        stableName = "internal";
+
     mRawPath = StringPrintf("/mnt/media_rw/%s", stableName.c_str());
 
     mFuseDefault = StringPrintf("/mnt/runtime/default/%s", stableName.c_str());
