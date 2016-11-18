@@ -342,6 +342,10 @@ status_t Disk::readPartitions() {
                     createPublicVolume(partDevice);
                     break;
 
+                case 0x83: // EXT4
+                    LOG(ERROR) << "unsupported EXT4 filesystem";
+                    break;
+
                 default:
                     // We should still create public volume here
                     // cause some disk table types are not matched above
