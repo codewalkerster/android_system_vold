@@ -108,7 +108,11 @@ int main(int argc, char** argv) {
     }
 
 #ifdef SUPPORT_DIG
-    DigManager::StartDig();
+    DigManager *dm;
+    if (!(dm = DigManager::Instance())) {
+        SLOGE("Unable to create DigManager");
+        exit(1);
+    };
 #endif
 
     if (property_get_bool("vold.debug", false)) {
@@ -119,7 +123,9 @@ int main(int argc, char** argv) {
     ccl = new CryptCommandListener();
     vm->setBroadcaster((SocketListener *) cl);
     nm->setBroadcaster((SocketListener *) cl);
-
+#ifdef SUPPORT_DIG
+    dm->setBroadcaster((SocketListener *) cl);
+#endif
     if (vm->start()) {
         PLOG(ERROR) << "Unable to start VolumeManager";
         exit(1);
@@ -134,6 +140,12 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+#ifdef SUPPORT_DIG
+    if (dm->start()) {
+        SLOGE("Unable to start DigManager (%s)", strerror(errno));
+        exit(1);
+    }
+#endif
     set_media_poll_time();
     coldboot("/sys/block");
 //    coldboot("/sys/class/switch");
