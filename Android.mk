@@ -102,11 +102,6 @@ LOCAL_CFLAGS += -DHAS_NTFS_3G
 LOCAL_CFLAGS += -DHAS_EXFAT_FUSE
 LOCAL_CFLAGS += -DHAS_VIRTUAL_CDROM
 
-ifneq ($(TARGET_SUPPORT_DIG),false)
-common_shared_libraries += libdig
-LOCAL_CFLAGS += -DSUPPORT_DIG
-LOCAL_C_INCLUDES += vendor/amlogic/frameworks/services/data_integrity_guard
-endif
 LOCAL_CFLAGS += $(vold_cflags)
 LOCAL_CONLYFLAGS := $(vold_conlyflags)
 
