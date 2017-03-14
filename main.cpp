@@ -20,6 +20,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <dirent.h>
 
 #include <fcntl.h>
 #include <dirent.h>
@@ -161,19 +162,31 @@ static int process_config(VolumeManager *vm)
 
     property_get("ro.hardware", propbuf, "");
 
-    FILE *fp_mmc = fopen("/sys/bus/platform/drivers/odroid-sysfs/odroid_sysfs.15/boot_mode","r");
-    char boot_mode = 0;
-    if (fp_mmc) {
-        fread(&boot_mode, 1, 1, fp_mmc);
-        SLOGE("boot_mode = %c", boot_mode);
-        fclose(fp_mmc);
-    }
-    if (boot_mode == '1') {
-        SLOGE("sd boot_mode");
-        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s.sdboot", propbuf);
-    } else {
-        SLOGE("eMMC boot_mode");
-        snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
+    DIR *dp = NULL;
+    struct dirent *ep = NULL;
+    char node[128] = {'\0',};
+    dp = opendir("/sys/bus/platform/drivers/odroid-sysfs/");
+    if (dp != NULL) {
+        while (ep = readdir(dp)) {
+            if (strncmp(ep->d_name, "odroid_sysfs.", 13) == 0) {
+                sprintf(node, "/sys/bus/platform/drivers/odroid-sysfs/%s/boot_mode", ep->d_name);
+                SLOGD("%s", node);
+                FILE *fp_mmc = fopen(node, "r");
+                char boot_mode = 0;
+                if (fp_mmc) {
+                    fread(&boot_mode, 1, 1, fp_mmc);
+                    SLOGE("boot_mode = %c", boot_mode);
+                    fclose(fp_mmc);
+                }
+                if (boot_mode == '1') {
+                    SLOGE("sd boot_mode");
+                    snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s.sdboot", propbuf);
+                } else {
+                    SLOGE("eMMC boot_mode");
+                    snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
+                }
+            }
+        }
     }
 
     fstab = fs_mgr_read_fstab(fstab_filename);
