@@ -307,6 +307,8 @@ void VolumeManager::handleBlockEvent(NetlinkEvent *evt) {
                 int flags = source->getFlags();
                 if (major == kMajorBlockMmc) {
                     flags |= android::vold::Disk::Flags::kSd;
+                } else if (major == android::vold::Disk::kMajorBlockCdrom) {
+                    flags |= android::vold::Disk::Flags::kCdrom;
                 } else {
                     flags |= android::vold::Disk::Flags::kUsb;
                 }

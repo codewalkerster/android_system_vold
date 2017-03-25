@@ -40,6 +40,27 @@ public:
     Disk(const std::string& eventPath, dev_t device, const std::string& nickname, int flags);
     virtual ~Disk();
 
+    enum {
+        kMajorBlockScsiA = 8,
+        kMajorBlockCdrom = 11,
+        kMajorBlockScsiB = 65,
+        kMajorBlockScsiC = 66,
+        kMajorBlockScsiD = 67,
+        kMajorBlockScsiE = 68,
+        kMajorBlockScsiF = 69,
+        kMajorBlockScsiG = 70,
+        kMajorBlockScsiH = 71,
+        kMajorBlockScsiI = 128,
+        kMajorBlockScsiJ = 129,
+        kMajorBlockScsiK = 130,
+        kMajorBlockScsiL = 131,
+        kMajorBlockScsiM = 132,
+        kMajorBlockScsiN = 133,
+        kMajorBlockScsiO = 134,
+        kMajorBlockScsiP = 135,
+        kMajorBlockMmc   = 179,
+    };
+
     enum Flags {
         /* Flag that disk is adoptable */
         kAdoptable = 1 << 0,
@@ -52,6 +73,10 @@ public:
         kUsb = 1 << 3,
         /* Flag that disk is EMMC internal */
         kEmmc = 1 << 4,
+        /* Flag that disk is non-removable */
+        kNonRemovable = 1 << 5,
+        /* Flag that disk is CDROM */
+        kCdrom = 1 << 6,
     };
 
     const std::string& getId() { return mId; }

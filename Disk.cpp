@@ -217,6 +217,9 @@ status_t Disk::readMetadata() {
     }
 
     switch (major(mDevice)) {
+    case kMajorBlockCdrom:
+        LOG(DEBUG) << "Found a CDROM: " << mSysPath;
+        // fall through
     case kMajorBlockScsiA: case kMajorBlockScsiB: case kMajorBlockScsiC: case kMajorBlockScsiD:
     case kMajorBlockScsiE: case kMajorBlockScsiF: case kMajorBlockScsiG: case kMajorBlockScsiH:
     case kMajorBlockScsiI: case kMajorBlockScsiJ: case kMajorBlockScsiK: case kMajorBlockScsiL:
@@ -277,7 +280,7 @@ status_t Disk::readPartitions() {
     cmd.push_back(mDevPath);
 
     std::vector<std::string> output;
-    status_t res = ForkExecvp(cmd, output);
+    status_t res = maxMinors ? ForkExecvp(cmd, output) : ENODEV;
     if (res != OK) {
         LOG(WARNING) << "sgdisk failed to scan " << mDevPath;
         notifyEvent(ResponseCode::DiskScanned);
@@ -541,6 +544,9 @@ int Disk::getMaxMinors() {
     case kMajorBlockScsiM: case kMajorBlockScsiN: case kMajorBlockScsiO: case kMajorBlockScsiP: {
         // Per Documentation/devices.txt this is static
         return 15;
+    }
+    case kMajorBlockCdrom: {
+        return 0;
     }
     case kMajorBlockMmc: {
         // Per Documentation/devices.txt this is dynamic
