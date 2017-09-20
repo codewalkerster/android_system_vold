@@ -334,19 +334,25 @@ status_t Disk::readPartitions() {
                 LOG(INFO)<<"type =" << type;
                 switch (strtol(type, nullptr, 16)) {
                 case 0x06: // FAT16
-		case 0x07: // ntfs
+                case 0x07: // ntfs
                 case 0x0b: // W95 FAT32 (LBA)
                 case 0x0c: // W95 FAT32 (LBA)
                 case 0x0e: // W95 FAT16 (LBA)
-		case 0x83: // ext3 
                     createPublicVolume(partDevice);
-		    validParts = true;
+                    validParts = true;
+                    break;
+                case 0x83: // ext3
+                    //Support ext4 disk that have only 1 partition formatted ext4.
+                    if (i == 1) {
+                        createPublicVolume(partDevice);
+                        validParts = true;
+                    }
                     break;
                 }
             } else if (table == Table::kGpt) {
                 const char* typeGuid = strtok(nullptr, kSgdiskToken);
                 const char* partGuid = strtok(nullptr, kSgdiskToken);
-		validParts = true;
+                validParts = true;
 
                 if (!strcasecmp(typeGuid, kGptBasicData)) {
                     createPublicVolume(partDevice);
