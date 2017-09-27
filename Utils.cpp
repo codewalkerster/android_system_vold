@@ -123,18 +123,26 @@ status_t ForceUnmount(const std::string& path) {
     if (!umount2(cpath, UMOUNT_NOFOLLOW) || errno == EINVAL || errno == ENOENT) {
         return OK;
     }
+    // Apps might still be handling eject request, so wait before
+    // we start sending signals
+    sleep(5);
 
     Process::killProcessesWithOpenFiles(cpath, SIGINT);
+    sleep(5);
     if (!umount2(cpath, UMOUNT_NOFOLLOW) || errno == EINVAL || errno == ENOENT) {
         return OK;
     }
 
-    for(int i=0;i<5;i++){
-        Process::killProcessesWithOpenFiles(cpath, SIGKILL);
-        usleep(500000);
-        if (!umount2(cpath, UMOUNT_NOFOLLOW) || errno == EINVAL || errno == ENOENT) {
-            return OK;
-        }
+    Process::killProcessesWithOpenFiles(cpath, SIGTERM);
+    sleep(5);
+    if (!umount2(cpath, UMOUNT_NOFOLLOW) || errno == EINVAL || errno == ENOENT) {
+        return OK;
+    }
+
+    Process::killProcessesWithOpenFiles(cpath, SIGKILL);
+    sleep(5);
+    if (!umount2(cpath, UMOUNT_NOFOLLOW) || errno == EINVAL || errno == ENOENT) {
+        return OK;
     }
 
     return -errno;
@@ -145,17 +153,17 @@ status_t KillProcessesUsingPath(const std::string& path) {
     if (Process::killProcessesWithOpenFiles(cpath, SIGINT) == 0) {
         return OK;
     }
-    usleep(500000);
+    sleep(5);
 
     if (Process::killProcessesWithOpenFiles(cpath, SIGTERM) == 0) {
         return OK;
     }
-    usleep(500000);
+    sleep(5);
 
     if (Process::killProcessesWithOpenFiles(cpath, SIGKILL) == 0) {
         return OK;
     }
-    usleep(500000);
+    sleep(5);
 
     // Send SIGKILL a second time to determine if we've
     // actually killed everyone with open files
