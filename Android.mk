@@ -76,7 +76,7 @@ common_static_libraries := \
 vold_conlyflags := -std=c11
 vold_cflags := -Werror -Wall -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-parameter
 #add for disable selinux product
-ifneq (,$(filter px3,$(TARGET_PRODUCT)))
+ifneq (,$(filter odroidn1,$(TARGET_PRODUCT)))
   vold_cflags += -DDISABLE_SELINUX=1
 else
   vold_cflags += -DDISABLE_SELINUX=0
