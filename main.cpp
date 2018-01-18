@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
     LOG(VERBOSE) << "Detected support for:"
             << (android::vold::IsFilesystemSupported("ext4") ? " ext4" : "")
             << (android::vold::IsFilesystemSupported("f2fs") ? " f2fs" : "")
+            << (android::vold::IsFilesystemSupported("exfat") ? " exvfat" : "")
             << (android::vold::IsFilesystemSupported("vfat") ? " vfat" : "");
 
     VolumeManager *vm;

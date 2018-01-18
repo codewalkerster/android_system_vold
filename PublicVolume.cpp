@@ -18,6 +18,7 @@
 #include "fs/Ext4.h"
 #include "fs/F2fs.h"
 #include "fs/Ntfs.h"
+#include "fs/Exfat.h"
 #include "PublicVolume.h"
 #include "Utils.h"
 #include "VolumeManager.h"
@@ -45,9 +46,15 @@ static const char* kFusePath = "/system/bin/sdcard";
 static const char* kAsecPath = "/mnt/secure/asec";
 
 PublicVolume::PublicVolume(dev_t device) :
-        VolumeBase(Type::kPublic), mDevice(device), mFusePid(0) {
+        VolumeBase(Type::kPublic), mDevice(device), mFusePid(0), mJustPhysicalDev(false) {
     setId(StringPrintf("public:%u,%u", major(device), minor(device)));
     mDevPath = StringPrintf("/dev/block/vold/%s", getId().c_str());
+}
+
+PublicVolume::PublicVolume(const std::string& physicalDevName) :
+        VolumeBase(Type::kPublic), mFusePid(0), mJustPhysicalDev(true) {
+    setId(physicalDevName);
+    mDevPath = StringPrintf("/dev/block/%s", getId().c_str());
 }
 
 PublicVolume::~PublicVolume() {
@@ -86,10 +93,12 @@ status_t PublicVolume::initAsecStage() {
 }
 
 status_t PublicVolume::doCreate() {
+    if (mJustPhysicalDev) return 0;
     return CreateDeviceNode(mDevPath, mDevice);
 }
 
 status_t PublicVolume::doDestroy() {
+    if (mJustPhysicalDev) return 0;
     return DestroyDeviceNode(mDevPath);
 }
 
@@ -147,6 +156,27 @@ status_t PublicVolume::doMount() {
         if (vfat::Mount(mDevPath, mRawPath, false, false, false,
                 AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) {
             PLOG(ERROR) << getId() << " vfat failed to mount " << mDevPath;
+            return -EIO;
+        }
+    } else if (mFsType == "exfat") {
+        status_t mountStatus = -1;
+        std::string logicPartDevPath = mDevPath;
+        if (GetLogicalPartitionDevice(mDevice, getSysPath(), logicPartDevPath) != OK) {
+            LOG(ERROR) << "failed to get logical partition device for fstype " << mFsType;
+            return -errno;
+        }
+
+
+        int res = exfat::Check(mDevPath.c_str());
+        if (res == 0 || res == 1) {
+            LOG(DEBUG) << getId() << " passed filesystem check";
+        } else {
+            PLOG(ERROR) << getId() << " failed filesystem check";
+            return -EIO;
+        }
+        if (exfat::Mount(logicPartDevPath.c_str(), mRawPath.c_str(), false, false,
+                AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) {
+            PLOG(ERROR) << getId() << " exfat failed to mount " << mDevPath;
             return -EIO;
         }
     } else if (mFsType == "ntfs") {

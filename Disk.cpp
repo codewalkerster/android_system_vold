@@ -161,6 +161,24 @@ status_t Disk::destroy() {
     return OK;
 }
 
+void Disk::handleJustPublicPhysicalDevice(
+    const std::string& physicalDevName) {
+    auto vol = std::shared_ptr<VolumeBase>(new PublicVolume(physicalDevName));
+    if (mJustPartitioned) {
+        LOG(DEBUG) << "Device just partitioned; silently formatting";
+        vol->setSilent(true);
+        vol->create();
+        vol->format("auto");
+        vol->destroy();
+        vol->setSilent(false);
+    }
+
+    mVolumes.push_back(vol);
+    vol->setDiskId(getId());
+    vol->setSysPath(getSysPath());
+    vol->create();
+}
+
 void Disk::createPublicVolume(dev_t device) {
     auto vol = std::shared_ptr<VolumeBase>(new PublicVolume(device));
     if (mJustPartitioned) {
@@ -174,6 +192,7 @@ void Disk::createPublicVolume(dev_t device) {
 
     mVolumes.push_back(vol);
     vol->setDiskId(getId());
+    vol->setSysPath(getSysPath());
     vol->create();
 }
 
@@ -306,6 +325,7 @@ status_t Disk::readPartitions() {
     Table table = Table::kUnknown;
     bool foundParts = false;
     bool validParts = false;
+	std::string physicalDevName;
     for (auto line : output) {
         char* cline = (char*) line.c_str();
         char* token = strtok(cline, kSgdiskToken);
@@ -329,6 +349,12 @@ status_t Disk::readPartitions() {
             dev_t partDevice = makedev(major(mDevice), minor(mDevice) + i);
 
             if (table == Table::kMbr) {
+                if (IsJustPhysicalDevice(mSysPath, physicalDevName)) {
+                    LOG(INFO) << " here,we don't create public:xx,xx for physical device only!";
+                    handleJustPublicPhysicalDevice(physicalDevName);
+                    break;
+                }
+
                 const char* type = strtok(nullptr, kSgdiskToken);
 
                 LOG(INFO)<<"type =" << type;
@@ -370,7 +396,11 @@ status_t Disk::readPartitions() {
         std::string fsType;
         std::string unused;
         if (ReadMetadataUntrusted(mDevPath, fsType, unused, unused) == OK) {
-            createPublicVolume(mDevice);
+            if (IsJustPhysicalDevice(mSysPath, physicalDevName)) {
+                handleJustPublicPhysicalDevice(physicalDevName);
+            } else {
+                createPublicVolume(mDevice);
+            }
         } else {
             LOG(WARNING) << mId << " failed to identify, giving up";
         }
