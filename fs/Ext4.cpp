@@ -42,6 +42,7 @@
 #include <cutils/log.h>
 #include <cutils/properties.h>
 #include <logwrap/logwrap.h>
+#include <private/android_filesystem_config.h>
 #include <selinux/selinux.h>
 
 #include "Ext4.h"
@@ -141,6 +142,11 @@ status_t Mount(const std::string& source, const std::string& target, bool ro,
     flags |= (remount ? MS_REMOUNT : 0);
 
     rc = mount(c_source, c_target, "ext4", flags, NULL);
+
+    if (rc == 0) {
+        chown(c_target, AID_MEDIA_RW, AID_MEDIA_RW);
+        chmod(c_target, 0775);
+    }
 
     if (rc && errno == EROFS) {
         SLOGE("%s appears to be a read only filesystem - retrying mount RO", c_source);
