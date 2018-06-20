@@ -62,6 +62,14 @@ PublicVolume::~PublicVolume() {
 
 status_t PublicVolume::readMetadata() {
     status_t res = ReadMetadataUntrusted(mDevPath, mFsType, mFsUuid, mFsLabel);
+
+    // iso9660 has no UUID, we use label as UUID
+    if ((mFsType == "iso9660" || mFsType == "udf") && mFsUuid.empty() && !mFsLabel.empty()) {
+        std::replace(mFsLabel.begin(), mFsLabel.end(), ' ', '_');
+        mFsUuid = mFsLabel;
+        LOG(ERROR) << "mFsUuid = " << mFsUuid;
+    }
+
     notifyEvent(ResponseCode::VolumeFsTypeChanged, mFsType);
     notifyEvent(ResponseCode::VolumeFsUuidChanged, mFsUuid);
     notifyEvent(ResponseCode::VolumeFsLabelChanged, mFsLabel);
@@ -109,7 +117,8 @@ status_t PublicVolume::doMount() {
     if (mFsType != "vfat" &&
         mFsType != "ntfs" &&
         mFsType != "exfat" &&
-        mFsType != "hfs") {
+        mFsType != "hfs" &&
+        mFsType != "udf") {
         LOG(ERROR) << getId() << " unsupported filesystem " << mFsType;
         return -EIO;
     }
@@ -124,6 +133,10 @@ status_t PublicVolume::doMount() {
         checkStatus = exfat::Check(mDevPath.c_str());
     } else if (mFsType == "hfs") {
         checkStatus = hfsplus::Check(mDevPath.c_str());
+    } else if (mFsType == "iso9660" || mFsType == "udf") {
+        checkStatus = 0;
+    } else {
+        LOG(WARNING) << getId() << " unsupported filesystem check, skipping";
     }
 
     if (checkStatus) {
@@ -182,7 +195,7 @@ status_t PublicVolume::doMount() {
     } else if (mFsType == "exfat") {
         mountStatus = exfat::Mount(logicPartDevPath.c_str(), mRawPath.c_str(), false, false,
                             AID_MEDIA_RW, AID_MEDIA_RW, 0007, true);
-    } else if (mFsType == "hfs") {
+    } else if (mFsType == "hfs" || mFsType == "udf") {
         if ((mountStatus = hfsplus::Mount(mDevPath.c_str(), mRawPath.c_str(), false, false,
                             AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) != 0) {
             LOG(ERROR) << mDevPath.c_str() << " failed to mount via hfs+";

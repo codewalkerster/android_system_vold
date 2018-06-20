@@ -283,6 +283,16 @@ status_t Disk::readPartitions() {
     status_t res = maxMinors ? ForkExecvp(cmd, output) : ENODEV;
     if (res != OK) {
         LOG(WARNING) << "sgdisk failed to scan " << mDevPath;
+
+        std::string fsType, unused;
+        if (ReadMetadataUntrusted(mDevPath, fsType, unused, unused) == OK) {
+            if (fsType == "iso9660" || fsType == "udf") {
+                LOG(INFO) << "Detect " << fsType;
+                createPublicVolume(mDevice);
+                res = OK;
+            }
+        }
+
         notifyEvent(ResponseCode::DiskScanned);
         mJustPartitioned = false;
         return res;
@@ -323,6 +333,7 @@ status_t Disk::readPartitions() {
                 const char* type = strtok(nullptr, kSgdiskToken);
 
                 switch (strtol(type, nullptr, 16)) {
+                case 0x00: // ISO9660
                 case 0x06: // FAT16
                 case 0x0b: // W95 FAT32 (LBA)
                 case 0x0c: // W95 FAT32 (LBA)
