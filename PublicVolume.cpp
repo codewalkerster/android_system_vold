@@ -118,6 +118,7 @@ status_t PublicVolume::doMount() {
         mFsType != "ntfs" &&
         mFsType != "exfat" &&
         mFsType != "hfs" &&
+        mFsType != "iso9660" &&
         mFsType != "udf") {
         LOG(ERROR) << getId() << " unsupported filesystem " << mFsType;
         return -EIO;
@@ -195,7 +196,7 @@ status_t PublicVolume::doMount() {
     } else if (mFsType == "exfat") {
         mountStatus = exfat::Mount(logicPartDevPath.c_str(), mRawPath.c_str(), false, false,
                             AID_MEDIA_RW, AID_MEDIA_RW, 0007, true);
-    } else if (mFsType == "hfs" || mFsType == "udf") {
+    } else if (mFsType == "hfs" || mFsType == "udf" || mFsType == "iso9660" ) {
         if ((mountStatus = hfsplus::Mount(mDevPath.c_str(), mRawPath.c_str(), false, false,
                             AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) != 0) {
             LOG(ERROR) << mDevPath.c_str() << " failed to mount via hfs+";
