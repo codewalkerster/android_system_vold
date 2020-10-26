@@ -18,6 +18,7 @@
 #include "Utils.h"
 #include "VolumeManager.h"
 #include "fs/Exfat.h"
+#include "fs/Ext4.h"
 #include "fs/Ntfs.h"
 #include "fs/Vfat.h"
 
@@ -112,6 +113,11 @@ status_t PublicVolume::doMount() {
             LOG(ERROR) << getId() << " failed filesystem check";
             return -EIO;
         }
+    } else if (mFsType == "ext4" && ext4::IsSupported()) {
+        if (ext4::Check(mDevPath, mRawPath)) {
+            LOG(ERROR) << getId() << " failed filesystem check";
+            return -EIO;
+        }
     } else {
         LOG(ERROR) << getId() << " unsupported filesystem " << mFsType;
         return -EIO;
@@ -155,6 +161,11 @@ status_t PublicVolume::doMount() {
     } else if (mFsType == "ntfs") {
         if (ntfs::Mount(mDevPath, mRawPath, false, false,
                             AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) {
+            PLOG(ERROR) << getId() << " failed to mount " << mDevPath;
+            return -EIO;
+        }
+    } else if (mFsType == "ext4") {
+        if (ext4::Mount(mDevPath, mRawPath, false, false, true)) {
             PLOG(ERROR) << getId() << " failed to mount " << mDevPath;
             return -EIO;
         }
