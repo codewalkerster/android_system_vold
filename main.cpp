@@ -239,7 +239,6 @@ static int process_config(VolumeManager* vm, bool* has_adoptable, bool* has_quot
         PLOG(ERROR) << "Failed to open default fstab";
         return -1;
     }
-    bool sd_boot = access("/proc/device-tree/sd@ffe05000/sd/ignore_mpt", F_OK) != 0;
 
     /* Loop through entries looking for ones that vold manages */
     *has_adoptable = false;
@@ -255,7 +254,7 @@ static int process_config(VolumeManager* vm, bool* has_adoptable, bool* has_quot
         }
 
         if (fs_mgr_is_voldmanaged(rec)) {
-            if (sd_boot && (strstr(rec->blk_device, "sd/mmc_host") != NULL))
+            if (strstr(rec->blk_device, "sd/mmc_host") != NULL)
                 continue;
 
             if (fs_mgr_is_nonremovable(rec)) {
