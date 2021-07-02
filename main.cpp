@@ -230,6 +230,35 @@ static void coldboot(const char *path) {
     }
 }
 
+#define BUFFER_SIZE 1024
+
+static bool isSdBoot() {
+    int fd;
+    bool isSdBoot = false;
+    const char *boot_device = "boot_device=";
+    const size_t boot_dev_length = strlen(boot_device);
+    const char *sd_node = "mmcblk1";
+    char buffer[BUFFER_SIZE];
+    size_t len = 0;
+
+    fd = open("/proc/cmdline", O_RDONLY);
+
+    len = read(fd, buffer,BUFFER_SIZE);
+    if (len > 0) {
+        char *token = strtok(buffer, " ");
+        while (token != NULL) {
+            if (!strncmp(token, boot_device, boot_dev_length)) {
+                isSdBoot = !strncmp (token + boot_dev_length, sd_node, strlen(sd_node));
+                break;
+            }
+            token = strtok(NULL, " ");
+        }
+    }
+
+    close (fd);
+    return isSdBoot;
+}
+
 static int process_config(VolumeManager* vm, bool* has_adoptable, bool* has_quota,
                           bool* has_reserved) {
     ATRACE_NAME("process_config");
@@ -254,7 +283,7 @@ static int process_config(VolumeManager* vm, bool* has_adoptable, bool* has_quot
         }
 
         if (fs_mgr_is_voldmanaged(rec)) {
-            if (strstr(rec->blk_device, "sd/mmc_host") != NULL)
+            if (isSdBoot() && (strstr(rec->blk_device, "sd/mmc_host") != NULL))
                 continue;
 
             if (fs_mgr_is_nonremovable(rec)) {
