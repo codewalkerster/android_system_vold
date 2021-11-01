@@ -213,6 +213,33 @@ static void coldboot(const char* path) {
     }
 }
 
+#define BUFFER_SIZE 1024
+
+static bool isSdBoot() {
+    int fd = open("/proc/cmdline", O_RDONLY);
+    bool isSdBoot = false;
+    const char *boot =  "storagemedia=";
+    const size_t boot_leng = strlen(boot);
+    const char *sd = "sd";
+    char buffer [BUFFER_SIZE];
+    size_t len = 0;
+
+    len = read(fd, buffer, BUFFER_SIZE);
+    if (len > 0) {
+        char *token = strtok(buffer, " ");
+        while (token != NULL) {
+            if (!strncmp(token, boot, boot_leng)) {
+                isSdBoot = !strncmp(token + boot_leng, sd, strlen(sd));
+                break;
+            }
+            token = strtok(NULL, " ");
+        }
+    }
+
+    close (fd);
+    return isSdBoot;
+}
+
 static int process_config(VolumeManager* vm, bool* has_adoptable, bool* has_quota,
                           bool* has_reserved) {
     ATRACE_NAME("process_config");
@@ -240,6 +267,10 @@ static int process_config(VolumeManager* vm, bool* has_adoptable, bool* has_quot
         }
 
         if (entry.fs_mgr_flags.vold_managed) {
+            if (isSdBoot() && (strstr(entry.blk_device.c_str(), "dwmmc") != NULL)) {
+                LOG(WARNING) << "SD Card booting; ignoring volume";
+                continue;
+            }
             if (entry.fs_mgr_flags.nonremovable) {
                 LOG(WARNING) << "nonremovable no longer supported; ignoring volume";
                 continue;
